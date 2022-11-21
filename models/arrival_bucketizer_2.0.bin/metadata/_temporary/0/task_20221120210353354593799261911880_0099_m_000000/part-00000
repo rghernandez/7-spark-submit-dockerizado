@@ -1,0 +1,1 @@
+{"class":"org.apache.spark.ml.feature.Bucketizer","timestamp":1668978233070,"sparkVersion":"3.1.2","uid":"Bucketizer_b59ce94f380c","paramMap":{"outputCol":"ArrDelayBucket","splits":["-Inf",-15.0,0.0,30.0,"Inf"],"inputCol":"ArrDelay"},"defaultParamMap":{"outputCol":"Bucketizer_b59ce94f380c__output","handleInvalid":"error"}}

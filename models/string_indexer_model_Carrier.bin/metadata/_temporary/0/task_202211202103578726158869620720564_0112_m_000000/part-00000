@@ -1,0 +1,1 @@
+{"class":"org.apache.spark.ml.feature.StringIndexerModel","timestamp":1668978237169,"sparkVersion":"3.1.2","uid":"StringIndexer_22903d3d1139","paramMap":{"outputCol":"Carrier_index","inputCol":"Carrier"},"defaultParamMap":{"handleInvalid":"error","stringOrderType":"frequencyDesc","outputCol":"StringIndexer_22903d3d1139__output"}}
