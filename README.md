@@ -63,40 +63,40 @@ docker compose up
 ```
 Esto levantará la aplicación web en http://localhost:5000/flights/delays/predict_kafka y spark en http://localhost:8080.
 
-### Despliegue en local
+## Despliegue en local
 
 Nos descargamos el proyecto desde el github y accedemos a él:
 ```
 git clone https://github.com/ging/practica_big_data_2019
 cd practica_big_data_2019
 ```
-Now download the data.
+A continuación, descargamos el dataset.
 
 ```
 resources/download_data.sh
 ```
 
  
- ### Install python libraries
+ ### Instalar las librerías de Python
  
  ```
   pip install -r requirements.txt
  ```
- ### Start Zookeeper
+ ### Iniciar Zookeeper
  
- Open a console and go to the downloaded Kafka directory and run:
+ Abrir la consola, acceder al directorio de Kafka y ejecutar:
  
  ```
    bin/zookeeper-server-start.sh config/zookeeper.properties
   ```
-  ### Start Kafka
+  ### Iniciar Kafka
   
-  Open a console and go to the downloaded Kafka directory and run:
+  Abrir la consola, acceder al directorio de Kafka y ejecutar:
   
   ```
     bin/kafka-server-start.sh config/server.properties
    ```
-   open a new console in teh same directory and create a new topic :
+  Abrir una nueva consola en el mismo directorio y crear el tópic:
   ```
       bin/kafka-topics.sh \
         --create \
@@ -105,31 +105,34 @@ resources/download_data.sh
         --partitions 1 \
         --topic flight_delay_classification_request
    ```
-   You should see the following message:
+  Se observará el siguiente mensaje:
   ```
     Created topic "flight_delay_classification_request".
   ```
-  You can see the topic we created with the list topics command:
+  Con el siguiente comando podrás observar el tópico creado:
   ```
       bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
   ```
-  Output:
+  Salida:
   ```
     flight_delay_classification_request
   ```
-  (Optional) You can oen a new console with a consumer in order to see the messeges sent to that topic
+ (Opcional) Puedes abrir una nueva consola con un consumidor para poder observar los mensajes enviados a un tópico
   ```
   bin/kafka-console-consumer.sh \
       --bootstrap-server localhost:9092 \
       --topic flight_delay_classification_request \
       --from-beginning
   ```
-  ## Import the distance records to MongoDB
-  Check if you have Mongo up and running:
+  ## Importar los registros de distancias en MongoDB
+  
+ Comprobar que Mongo esté levantado y corriendo:
   ```
   service mongod status
   ```
-  Output:
+  
+ Salida:
+ 
   ```
   mongod.service - MongoDB Database Server
      Loaded: loaded (/lib/systemd/system/mongod.service; disabled; vendor preset: 
@@ -141,11 +144,12 @@ resources/download_data.sh
   
   oct 01 14:58:53 amunoz systemd[1]: Started MongoDB Database Server.
   ```
-  Run the import_distances.sh script
+  Correr el script import_distances.sh
   ```
   ./resources/import_distances.sh
   ```
-  Output:
+  Salida:
+
   ```
   2019-10-01T17:06:46.957+0200	connected to: mongodb://localhost/
   2019-10-01T17:06:47.035+0200	4696 document(s) imported successfully. 0 document(s) failed to import.
@@ -161,69 +165,68 @@ resources/download_data.sh
   }
 
   ```
-  ## Train and Save de the model with PySpark mllib
-  In a console go to the base directory of the cloned repo, then go to the `practica_big_data_2019` directory
+  ## Entrenar y guardar el modelo con PySpark mllib
+  Acceder al directorio del repositorio clonado y acceder a `practica_big_data_2019`
   ```
     cd practica_big_data_2019
   ```
-  Set the `JAVA_HOME` env variable with teh path of java installation directory, for example:
+ Generar la variable de entorno `JAVA_HOME`:
   ```
     export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64
   ```
-  Set the `SPARK_HOME` env variable with teh path of your Spark installation folder, for example:
+ Generar la variable de entorno  `SPARK_HOME`:
   ```
     export SPARK_HOME=/opt/spark
   ```
-  Now, execute the script `train_spark_mllib_model.py`
+  Ejecutar el script `train_spark_mllib_model.py`
   ```
       python3 resources/train_spark_mllib_model.py .
   ```
-  As result, some files will be saved in the `models` folder 
+ Como resultado algunos ficheros se guardarán en la carpeta `models`: 
   
   ```
   ls ../models
   
   ```   
-  ## Run Flight Predictor
-  First, you need to change the base_paht val in the MakePrediction scala class,
-  change that val for the path where you clone repo is placed:
+  ## Ejecutar la Predicción de Vuelos
+  En primer lugar, es necesario modificar la variable base_path en el MakePrediction de la clase de Scala:
   ```
     val base_path= "/home/user/Desktop/practica_big_data_2019"
     
   ``` 
-  Then run the code using Intellij or spark-submit with their respective arguments. 
-  
-Please, note that in order to use spark-submit you first need to compile the code and build a JAR file using sbt. Also, when running the spark-submit command, you have to add at least these two packages with the --packages option:
+ Correr el código utilizando Intellij o spark-submit con sus respectivos argumentos. 
+ Generamos el jar para la ejecución con spark-submit:
+```
+sbt package 
+```
+ Y ejecutamos la predicción de vuelos con spark-submit.
   ```
-  --packages org.mongodb.spark:mongo-spark-connector_2.12:3.0.1,org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.2
+ spark-submit --class es.upm.dit.ging.predictor.MakePrediction --packages org.mongodb.spark:mongo-spark-connector_2.12:3.0.1,org.apache.spark:spark-sql-kafka-0-10_2.12:3.0.0 /practica_big_data_2019/flight_prediction/target/scala-2.12/flight_prediction_2.12-0.1.jar
      
   ``` 
-   Be carefull with the packages version because if you are using another version of spark, kafka or mongo you have to choose the correspondent version to your installation. This packages work with Spark 3.1.2, kafka_2.12-3.1.2 and mongo superior to 2.6
   
-  ## Start the prediction request Web Application
+  ## Iniciar la aplicación web para las peticiones de predicción
   
-  Set the `PROJECT_HOME` env variable with teh path of you cloned repository, for example:
+ Configurar la variable de entorno  `PROJECT_HOME`:
    ```
   export PROJECT_HOME=/home/user/Desktop/practica_big_data_2019
    ```
-  Go to the `web` directory under `resources` and execute the flask web application file `predict_flask.py`:
+ Ir a la carpeta `web` dentro de `resources` and ejecuta el fichero con la aplicación web `predict_flask.py`:
   ```
   cd practica_big_data_2019/resources/web
   python3 predict_flask.py
   
   ```
-  Now, visit http://localhost:5000/flights/delays/predict_kafka and, for fun, open the JavaScript console. Enter a nonzero departure delay, an ISO-formatted date (I used 2016-12-25, which was in the future at the time I was writing this), a valid carrier code (use AA or DL if you don’t know one), an origin and destination (my favorite is ATL → SFO), and a valid flight number (e.g., 1519), and hit Submit. Watch the debug output in the JavaScript console as the client polls for data from the response endpoint at /flights/delays/predict/classify_realtime/response/.
+ Visitar a continuación  http://localhost:5000/flights/delays/predict_kafka y abrir la consola JavaScript para visualizar el tráfico. Añadir un delay distinto de cero en la salida con el formato ISO-formatted date (2016-12-25), un código válido (AA o DL), un origen y destino, un número válido de vuelo (1519 por ejemplo) y pulsar en Submit. Observar el debug desde la consola para obtener más información.
   
-  Quickly switch windows to your Spark console. Within 10 seconds, the length we’ve configured of a minibatch, you should see something like the following:
-  
-  ## Check the predictions records inserted in MongoDB
+  ## Observar los registros de las predicciones insertados en MongoDB
   ```
    $ mongo
    > use use agile_data_science;
    >db.flight_delay_classification_response.find();
   
   ```
-  You must have a similar output as:
+  Deberá observar una salida como:
   
   ```
   { "_id" : ObjectId("5d8dcb105e8b5622696d6f2e"), "Origin" : "ATL", "DayOfWeek" : 6, "DayOfYear" : 360, "DayOfMonth" : 25, "Dest" : "SFO", "DepDelay" : 290, "Timestamp" : ISODate("2019-09-27T08:40:48.175Z"), "FlightDate" : ISODate("2016-12-24T23:00:00Z"), "Carrier" : "AA", "UUID" : "8e90da7e-63f5-45f9-8f3d-7d948120e5a2", "Distance" : 2139, "Route" : "ATL-SFO", "Prediction" : 3 }
@@ -233,27 +236,35 @@ Please, note that in order to use spark-submit you first need to compile the cod
 
 ```
 
-### Train the model with Apache Airflow (optional)
+### Entrenar el modelo con Apache Airflow (optional)
 
-- The version of Apache Airflow used is the 2.1.4 and it is installed with pip. For development it uses SQLite as database but it is not recommended for production. For the laboratory SQLite is sufficient.
+- Instalar las depencias de Apache Airflow:
 
-- Install python libraries for Apache Airflow (suggested Python 3.7)
-
-```shell
+```
 cd resources/airflow
 pip install -r requirements.txt -c constraints.txt
 ```
-- Set the `PROJECT_HOME` env variable with the path of you cloned repository, for example:
+- Establecemos la variable de entorno `PROJECT_HOME` :
 ```
 export PROJECT_HOME=/home/user/Desktop/practica_big_data_2019
 ```
-- Configure airflow environment
+- Configuramos el entorno de Airflow:
 
-```shell
+```
 export AIRFLOW_HOME=~/airflow
 mkdir $AIRFLOW_HOME/dags
 mkdir $AIRFLOW_HOME/logs
 mkdir $AIRFLOW_HOME/plugins
+```
+- Copiamos el DAG definido en `setup.py` en la carpeta dags que acabamos de crear:
+
+```
+cp setup.py $AIRFLOW_HOME/dags
+```
+
+- Iniciamos la base de datos de Airflow: 
+```
+airflow db init
 
 airflow users create \
     --username admin \
@@ -261,15 +272,21 @@ airflow users create \
     --lastname  Sparrow\
     --role Admin \
     --email example@mail.org
+    --pass pass
 ```
-- Start airflow scheduler and webserver
-```shell
-airflow webserver --port 8080
+- Iniciamos el scheduler y el webserver:
+
+```
+airflow webserver --port 9090
 airflow sheduler
 ```
-Vistit http://localhost:8080/home for the web version of Apache Airflow.
+- Visitamos http://localhost:9090/home para la ver la versión web de Apache Airflow. Si queremos ejecutar a través de la linea de comandos un DAG, por ejemplo, el que acabamos de crear ejecutariamos los siguientes comandos:
 
-- The DAG is defined in `resources/airflow/setup.py`.
+```
+airflow dags unpause agile_data_science_batch_prediction_model_training
+airflow dags trigger agile_data_science_batch_prediction_model_training
+```
+
 - **TODO**: add the DAG and execute it to train the model (see the official documentation of Apache Airflow to learn how to exectue and add a DAG with the airflow command).
 - **TODO**: explain the architecture of apache airflow (see the official documentation of Apache Airflow).
 - **TODO**: analyzing the setup.py: what happens if the task fails?, what is the peridocity of the task?
