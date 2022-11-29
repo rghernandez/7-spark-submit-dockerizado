@@ -53,7 +53,7 @@ A continuación, se detallará más en profundad como deberá funcionar el siste
 
 ## Instrucciones de despliegue
 
-### Despliegue con Docker 
+## Despliegue con Docker 
 Para el despliegue de la aplicación con docker compose:
 
 ```
@@ -124,7 +124,7 @@ resources/download_data.sh
       --topic flight_delay_classification_request \
       --from-beginning
   ```
-  ## Importar los registros de distancias en MongoDB
+  ### Importar los registros de distancias en MongoDB
   
  Comprobar que Mongo esté levantado y corriendo:
   ```
@@ -165,7 +165,7 @@ resources/download_data.sh
   }
 
   ```
-  ## Entrenar y guardar el modelo con PySpark mllib
+  ### Entrenar y guardar el modelo con PySpark mllib
   Acceder al directorio del repositorio clonado y acceder a `practica_big_data_2019`
   ```
     cd practica_big_data_2019
@@ -188,7 +188,7 @@ resources/download_data.sh
   ls ../models
   
   ```   
-  ## Ejecutar la Predicción de Vuelos
+  ### Ejecutar la Predicción de Vuelos
   En primer lugar, es necesario modificar la variable base_path en el MakePrediction de la clase de Scala:
   ```
     val base_path= "/home/user/Desktop/practica_big_data_2019"
@@ -205,7 +205,7 @@ sbt package
      
   ``` 
   
-  ## Iniciar la aplicación web para las peticiones de predicción
+  ### Iniciar la aplicación web para las peticiones de predicción
   
  Configurar la variable de entorno  `PROJECT_HOME`:
    ```
@@ -219,7 +219,7 @@ sbt package
   ```
  Visitar a continuación  http://localhost:5000/flights/delays/predict_kafka y abrir la consola JavaScript para visualizar el tráfico. Añadir un delay distinto de cero en la salida con el formato ISO-formatted date (2016-12-25), un código válido (AA o DL), un origen y destino, un número válido de vuelo (1519 por ejemplo) y pulsar en Submit. Observar el debug desde la consola para obtener más información.
   
-  ## Observar los registros de las predicciones insertados en MongoDB
+  ### Observar los registros de las predicciones insertados en MongoDB
   ```
    $ mongo
    > use use agile_data_science;
@@ -286,14 +286,91 @@ airflow sheduler
 airflow dags unpause agile_data_science_batch_prediction_model_training
 airflow dags trigger agile_data_science_batch_prediction_model_training
 ```
-
-- **TODO**: add the DAG and execute it to train the model (see the official documentation of Apache Airflow to learn how to exectue and add a DAG with the airflow command).
-- **TODO**: explain the architecture of apache airflow (see the official documentation of Apache Airflow).
-- **TODO**: analyzing the setup.py: what happens if the task fails?, what is the peridocity of the task?
-
 ![Apache Airflow DAG success](images/airflow.jpeg)
+### Arquitectura de airflow
+La arquitectura de Airflow se compone de 
+
+- Scheduler: Se encarga de hacer la programación de los DAGS, asi como de cargarlos en el Executor.  
+- Metadata Database: Base de datos que almacena el estado.
+- Executor: Se encarga de administrar las tareas que están en ejecución siendo ejecutadas por los workers.
+- Webserver: Es la interfaz que permite al usuario activar e inspeccionar los DAGs. Pudiendo ver en esta interfaz, por ejemplo, el estado de los DAGS.
+- Directorio DAG: Directorio desde el cual se cargan los nuevos DAGS para su ejecución.
+
+![Airflow-Architecture](images/airflow-arquitecture.jpeg)
+
+### Análisis Setup.py 
+
+Se añade a continuación el archivo setup.py con comentarios correspondientes a la funcionalidad de cada parte:
+
+```
+import sys, os, re
+
+from airflow import DAG
+from airflow.operators.bash import BashOperator
+
+from datetime import datetime, timedelta
+import iso8601
+
+PROJECT_HOME = os.getenv("PROJECT_HOME")
 
 
+default_args = {
+  'owner': 'airflow',
+  'depends_on_past': False,
+  'start_date': iso8601.parse_date("2016-12-01"),
+  'retries': 3,
+  'retry_delay': timedelta(minutes=5),
+}
+
+training_dag = DAG(
+  'agile_data_science_batch_prediction_model_training',
+  default_args=default_args,
+  schedule_interval=None
+)
+
+# We use the same two commands for all our PySpark tasks
+pyspark_bash_command = """
+/opt/spark/bin/spark-submit --master {{ params.master }} \
+  {{ params.base_path }}{{ params.filename }} \
+  {{ params.base_path }}
+"""
+pyspark_date_bash_command = """
+/opt/spark/bin/spark-submit --master {{ params.master }} \
+  {{ params.base_path }}{{ params.filename }} \
+  {{ ts }} {{ params.base_path }}
+"""
+
+
+# Gather the training data for our classifier
+"""
+extract_features_operator = BashOperator(
+  task_id = "pyspark_extract_features",
+  bash_command = pyspark_bash_command,
+  params = {
+    "master": "local[8]",
+    "filename": "resources/extract_features.py",
+    "base_path": "{}/".format(PROJECT_HOME)
+  },
+  dag=training_dag
+)
+
+"""
+
+# Train and persist the classifier model
+train_classifier_model_operator = BashOperator(
+  task_id = "pyspark_train_classifier_model",
+  bash_command = pyspark_bash_command,
+  params = {
+    "master": "local[8]",
+    "filename": "resources/train_spark_mllib_model.py",
+    "base_path": "{}/".format(PROJECT_HOME)
+  },
+  dag=training_dag
+)
+
+# The model training depends on the feature extraction
+#train_classifier_model_operator.set_upstream(extract_features_operator)
+```
 
 
 
