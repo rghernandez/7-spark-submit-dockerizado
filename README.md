@@ -1,4 +1,8 @@
 # Agile_Data_Code_2
+## Autores
+- Roberto García Hernández
+- Alejandro Montero Medialdea
+
 ## Introducción
 El presente proyecto de la asignatura BDFI en el curso 2022-2023 tiene como finalidad implementar un sistema de predicción de retrasos de vuelos. Dicho sistema estará compuesto por una serie de componentes que se encargarán de predecir analíticamente y en tiempo real una serie de trazas para poder mostrarnos el retraso resultante. Para ello la arquitectura de nuestro sistema será la mostrada a continuación.
 
@@ -54,7 +58,7 @@ A continuación, se detallará más en profundad como deberá funcionar el siste
 ## Instrucciones de despliegue
 
 ## Despliegue con Docker 
-Para el despliegue de la aplicación con docker compose:
+Para el despliegue de la aplicación con docker compose iniciamos un terminal y ejecutamos:
 
 ```
 git clone https://github.com/rghernandez/bdfidockerized
@@ -62,6 +66,14 @@ cd bdfidockerized
 docker compose up
 ```
 Esto levantará la aplicación web en http://localhost:5000/flights/delays/predict_kafka y spark en http://localhost:8080.
+
+Si esto lo queremos abrir desde Google Cloud, abririamos una shell y ejecutariamos los mismos comandos. A continuación, para visualizar las interfaces web realizariamos el proceso que se ve en las siguientes imágenes:
+
+![Gcloud-shell](images/gcloud-shell.jpeg)
+
+![Gcloud-ports](images/gcloud-puertos.jpeg)
+
+Esto nos abrirá una nueva pestaña en nuestro navegador con una url similar a: https://5000-cs-aa20e686-8a23-4990-92b7-421de53d38c5.cs-europe-west1-xedi.cloudshell.dev/?authuser=0&redirectedPreviously=true
 
 ## Despliegue en local
 
@@ -302,7 +314,7 @@ La arquitectura de Airflow se compone de
 
 Se añade a continuación el archivo setup.py con comentarios correspondientes a la funcionalidad de cada parte:
 
-```
+```python
 import sys, os, re
 
 from airflow import DAG
@@ -314,6 +326,9 @@ import iso8601
 PROJECT_HOME = os.getenv("PROJECT_HOME")
 
 
+# Con las siguientes propiedades definimos el numero de intentos que debe 
+# realizar antes de que el DAG no se ejecute y muera con la propiedad retries. 
+# Ademas, con retry_delay definimos cada cuanto tiempo realizamos estos reintentos.
 default_args = {
   'owner': 'airflow',
   'depends_on_past': False,
@@ -322,6 +337,10 @@ default_args = {
   'retry_delay': timedelta(minutes=5),
 }
 
+# A continuación se configura el DAG con las propiedades definidas anteriormente
+# y el nombre de este DAG. También se le asigna un schedule_interval para definir 
+# cada cuanto tiempo se debe realizar este DAG. Otros valores de este campo pueden ser
+# @once @hourly @daily
 training_dag = DAG(
   'agile_data_science_batch_prediction_model_training',
   default_args=default_args,
@@ -355,6 +374,10 @@ extract_features_operator = BashOperator(
 )
 
 """
+
+# En esta parte de define el BashOperator para saber que tarea se va a ejecutar 
+# en el DAG. Se define la dirección del master de Spark, el archivo de entrenamiento 
+# y la direccioón del proyecto
 
 # Train and persist the classifier model
 train_classifier_model_operator = BashOperator(
